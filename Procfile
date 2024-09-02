@@ -1,0 +1,1 @@
+web: gunicorn tripdey.wsgi --log-file -

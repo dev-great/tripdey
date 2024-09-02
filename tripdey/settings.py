@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 import cloudinary_storage
 import cloudinary.uploader
 import cloudinary.api
+import dj_database_url
 
 # Load the .env file
 load_dotenv()
@@ -40,7 +41,7 @@ CORS_ALLOW_HEADERS = [
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["tripdey-f854eab697eb.herokuapp.com"]
 
 
 INSTALLED_APPS = [
@@ -308,3 +309,7 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+if 'DATABASE_URL' in os.environ:
+    import dj_database_url
+    DATABASES = {'default': dj_database_url.config()}
