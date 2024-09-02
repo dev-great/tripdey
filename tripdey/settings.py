@@ -14,7 +14,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET_KEY = "VnJlG9qDJ5-VmydVVZ1xQ7L5sWJ0Bs8shENLVDgzOPfKhY1N3A"
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
