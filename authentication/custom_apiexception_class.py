@@ -22,7 +22,6 @@ class CustomAPIException(APIException):
         return Response({
             'status_code': self.status_code,
             'message': self.detail,
-            "type": self.default_detail,
             'data': getattr(self, 'data', None)
         }, status=self.status_code)
 

@@ -1,9 +1,11 @@
 # views.py
 import os
 import logging
+import base64
 import random
 from urllib.parse import urlencode
-import jwt
+from google.oauth2 import id_token
+from google.auth.transport import requests
 from rest_framework.decorators import api_view
 from django.shortcuts import get_object_or_404, redirect
 from authentication.models import BusinessCategory, CustomUser, UserBusiness
@@ -350,17 +352,17 @@ class EmailOTPAuthentication(APIView):
 class BusinesscategoryAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, pk, format=None):
+    def get(self, request, format=None):
         try:
-            amenity = BusinessCategory.objects.get(id=pk)
+            amenity = BusinessCategory.objects.all()
         except BusinessCategory.DoesNotExist:
-            error_msg = f"Business category with id {pk} not found."
+            error_msg = f"Business category not found."
             return CustomAPIException(detail=error_msg, status_code=status.HTTP_404_NOT_FOUND).get_full_details()
         except Exception as e:
             error_msg = f"An error occurred while retrieving the Business category: {str(e)}"
             return CustomAPIException(detail=error_msg, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR).get_full_details()
 
-        serializer = BusinessCategorySerializer(amenity)
+        serializer = BusinessCategorySerializer(amenity, many=True)
         return custom_response(status_code=status.HTTP_200_OK, message="Business category fetched successfully", data=serializer.data)
 
     @swagger_auto_schema(
@@ -417,17 +419,18 @@ class BusinesscategoryAPIView(APIView):
 class UserBusinessAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, pk, format=None):
+    def get(self, request, format=None):
         try:
-            user_business = UserBusiness.objects.get(id=pk)
+            user_businesses = UserBusiness.objects.filter(
+                user=request.user).prefetch_related('category_type')
         except UserBusiness.DoesNotExist:
-            error_msg = f"User business with id {pk} not found."
+            error_msg = f"User business not found."
             return CustomAPIException(detail=error_msg, status_code=status.HTTP_404_NOT_FOUND).get_full_details()
         except Exception as e:
             error_msg = f"An error occurred while retrieving the User business: {str(e)}"
             return CustomAPIException(detail=error_msg, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR).get_full_details()
 
-        serializer = UserBusinessSerializer(user_business)
+        serializer = UserBusinessSerializer(user_businesses, many=True)
         return custom_response(status_code=status.HTTP_200_OK, message="User business fetched successfully", data=serializer.data)
 
     @swagger_auto_schema(
@@ -435,10 +438,10 @@ class UserBusinessAPIView(APIView):
         responses={status.HTTP_201_CREATED: UserBusinessSerializer(many=True)}
     )
     def post(self, request, *args, **kwargs):
-        serializer = UserBusinessSerializer(data=request.data, many=True)
+        serializer = UserBusinessSerializer(data=request.data)
         if serializer.is_valid():
             try:
-                serializer.save()
+                serializer.save(user=request.user)
                 response_data = serializer.data
                 return custom_response(status_code=status.HTTP_201_CREATED, message="User business created successfully", data=serializer.data)
             except Exception as e:
@@ -478,3 +481,21 @@ class UserBusinessAPIView(APIView):
             return custom_response(status_code=status.HTTP_404_NOT_FOUND, message="User business not found or you do not have permission to delete this User business")
         except Exception as e:
             return custom_response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, message="An unexpected error occurred", data=str(e))
+
+
+class GoogleAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, format=None):
+        token = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImIyZjgwYzYzNDYwMGVkMTMwNzIxMDFhOGI0MjIwNDQzNDMzZGIyODIiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIzNTA1NTU0NTA2OTMtOWJhYTE3MjdxYzI4aTdpOGcwc3NoaDRhNTJhYTMzMW8uYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiIzNTA1NTU0NTA2OTMtZ2ppYnFhcXRxdDZxMW8wNjF2YXBzNDZjMGNzN3BvY2kuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMTM1ODc2MTQxMzU4Mjg2NDcyNzAiLCJlbWFpbCI6ImdtYXJzaGFsMDcwQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYW1lIjoiR3JlYXRuZXNzIE1hcnNoYWwiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSVl6dnZLbXFHcWRfYzFwTG5qZG9vQXBrSU12ZGJUNTAwWTg4ZE9GSnBZdEQycDBJOXo9czk2LWMiLCJnaXZlbl9uYW1lIjoiR3JlYXRuZXNzIiwiZmFtaWx5X25hbWUiOiJNYXJzaGFsIiwiaWF0IjoxNzI1NDQ5Nzk1LCJleHAiOjE3MjU0NTMzOTV9.of5fqF5lC_I_3PnOh_G17a66SASvpOq6xkrrJj1Y0TyptTaWNHJB92Aoy7aOK17DO1gHS8gAQoLHMrSBusj0_5lKkdTx6nocDpSYkjCdjz6qUhQeE8Z8J_vP4pNGMM8kShfgijuFTeP1jn_vscF0E9hYRgRH2tKAh6KIpoKM0625b_GFdsj1pBg1MrpmQLC_k21ZUMLjY1yU70RKc4frwE9G1NvWc7YCO0CQ"
+        CLIENT_ID = "350555450693-gjibqaqtqt6q1o061vaps46c0cs7poci.apps.googleusercontent.com"
+        try:
+            idinfo = id_token.verify_oauth2_token(
+                token, requests.Request(), "350555450693-gjibqaqtqt6q1o061vaps46c0cs7poci.apps.googleusercontent.com")
+
+            print("Token is valid:", idinfo)
+            return custom_response(status_code=status.HTTP_200_OK, message="User success", data=idinfo)
+
+        except Exception as e:
+            return CustomAPIException(
+                detail=str(e), status_code=status.HTTP_404_NOT_FOUND).get_full_details()

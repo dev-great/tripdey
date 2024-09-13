@@ -41,7 +41,7 @@ CORS_ALLOW_HEADERS = [
 
 DEBUG = True
 
-ALLOWED_HOSTS = ["tripdey-f854eab697eb.herokuapp.com"]
+ALLOWED_HOSTS = ["tripdey-f854eab697eb.herokuapp.com", '127.0.0.1']
 
 
 INSTALLED_APPS = [
@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'oauth2_provider',
     'social_django',
     'drf_social_oauth2',
+    "drf_standardized_errors",
 
     # INSTALLED APPLICATION
     'authentication',
@@ -223,7 +224,11 @@ SERVER_EMAIL = EMAIL_HOST_USER
 
 SITE_ID = 1
 
+DRF_STANDARDIZED_ERRORS = {
+    "EXCEPTION_FORMATTER_CLASS": 'utils.custom_exception.MyExceptionFormatter',
+}
 REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': "drf_standardized_errors.handler.exception_handler",
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',

@@ -8,6 +8,7 @@ from django.contrib.auth import authenticate
 from rest_framework.validators import ValidationError
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import get_user_model
+from exceptions.custom_apiexception_class import *
 User = get_user_model()
 
 
@@ -77,14 +78,14 @@ class UserLoginSerializer(serializers.Serializer):
                 if user.is_active:
                     data['user'] = user
                 else:
-                    raise ValidationError(
-                        "Your account has been suspended", code=404)
+                    return CustomAPIException(detail="Your account has been suspended", status_code=status.HTTP_400_BAD_REQUEST).get_full_details()
+
             else:
-                raise ValidationError(
-                    "Please check your credentials and try again!", code=401)
+                return CustomAPIException(detail="Please check your credentials and try again!", status_code=status.HTTP_400_BAD_REQUEST).get_full_details()
+
         else:
-            raise ValidationError(
-                "Please enter both username and password to login!", code=401)
+            return CustomAPIException(detail="Please enter both username and password to login!", status_code=status.HTTP_400_BAD_REQUEST).get_full_details()
+
         return data
 
 
@@ -100,17 +101,30 @@ class ChangePasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(required=True)
 
 
+class BusinessCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BusinessCategory
+        fields = '__all__'
+        read_only_fields = ['created_on', 'updated_on']
+
+
 class UserBusinessSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    category_type = BusinessCategorySerializer(many=True, read_only=False)
 
     class Meta:
         model = UserBusiness
         fields = '__all__'
         read_only_fields = ['created_on', 'updated_on']
 
+    def create(self, validated_data):
+        category_type_data = validated_data.pop('category_type', [])
+        user_business = UserBusiness.objects.create(**validated_data)
+        user_business.category_type.set(category_type_data)
+        return user_business
 
-class BusinessCategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BusinessCategory
-        fields = '__all__'
-        read_only_fields = ['created_on', 'updated_on']
+    def update(self, instance, validated_data):
+        category_type_data = validated_data.pop('category_type', None)
+        if category_type_data:
+            instance.category_type.set(category_type_data)
+        return super().update(instance, validated_data)

@@ -1,6 +1,6 @@
 # urls.py
 from django.urls import path, include, re_path
-from .views import BusinesscategoryAPIView, ChangePasswordView, DeleteAccount, EmailOTPAuthentication,  Logout, RegisterView, LoginView, TokenRefreshView, TokenVerifyView, UserBusinessAPIView, UserProfileView
+from .views import BusinesscategoryAPIView, ChangePasswordView, DeleteAccount, EmailOTPAuthentication, GoogleAPIView,  Logout, RegisterView, LoginView, TokenRefreshView, TokenVerifyView, UserBusinessAPIView, UserProfileView
 
 urlpatterns = [
 
@@ -18,4 +18,6 @@ urlpatterns = [
     path('email/verify/', EmailOTPAuthentication.as_view(), name='email_verify'),
     path('user-business/', UserBusinessAPIView.as_view(), name='email_verify'),
     path('business-category/', BusinesscategoryAPIView.as_view(), name='email_verify'),
+
+    path('google-verify-api/', GoogleAPIView.as_view(), name='google_verify'),
 ]
