@@ -434,8 +434,8 @@ class UserBusinessAPIView(APIView):
         return custom_response(status_code=status.HTTP_200_OK, message="User business fetched successfully", data=serializer.data)
 
     @swagger_auto_schema(
-        request_body=UserBusinessSerializer(many=True),
-        responses={status.HTTP_201_CREATED: UserBusinessSerializer(many=True)}
+        request_body=UserBusinessSerializer(),
+        responses={status.HTTP_201_CREATED: UserBusinessSerializer()}
     )
     def post(self, request, *args, **kwargs):
         serializer = UserBusinessSerializer(data=request.data)
