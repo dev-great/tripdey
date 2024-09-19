@@ -120,7 +120,15 @@ class UserBusinessSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         category_type_data = validated_data.pop('category_type', [])
         user_business = UserBusiness.objects.create(**validated_data)
-        user_business.category_type.set(category_type_data)
+
+        # Process each category and either get or create it based on the "text" field
+        categories = []
+        for category_data in category_type_data:
+            text_value = category_data.get('text')
+            category_obj, created = BusinessCategory.objects.get_or_create(text=text_value)
+            categories.append(category_obj)
+
+        user_business.category_type.set(categories)
         return user_business
 
     def update(self, instance, validated_data):
